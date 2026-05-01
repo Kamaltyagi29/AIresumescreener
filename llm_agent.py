@@ -3,8 +3,8 @@ sys.dont_write_bytecode = True
 
 from dotenv import load_dotenv
 
-from langchain_openai.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage, AIMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 
 load_dotenv()
@@ -19,12 +19,11 @@ CUSTOMED_ENDPOINT = "https://aalto-openai-apigw.azure-api.net"
 
 class ChatBot():
   def __init__(self, api_key: str, model: str):
-    self.llm = ChatOpenAI(
-      model=model, 
-      api_key=api_key, 
+    self.llm = ChatGoogleGenerativeAI(
+      model=model,
+      google_api_key=api_key,
       temperature=0.1
     )
-
   def generate_subquestions(self, question: str):
     system_message = SystemMessage(content="""
       You are an expert in talent acquisition. Separate this job description into 3-4 more focused aspects for efficient resume retrieval. 

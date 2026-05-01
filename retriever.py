@@ -4,11 +4,11 @@ sys.dont_write_bytecode = True
 from typing import List
 from pydantic import BaseModel, Field
 
-from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
-from langchain.agents import tool
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema.agent import AgentFinish
-from langchain.tools.render import format_tool_to_openai_function
+from langchain_classic.agents.output_parsers.openai_functions import OpenAIFunctionsAgentOutputParser
+from langchain_core.tools import tool
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.agents import AgentFinish
+from langchain_core.utils.function_calling import convert_to_openai_function
 
 
 RAG_K_THRESHOLD = 5
@@ -92,8 +92,9 @@ class SelfQueryRetriever(RAGRetriever):
           resume_df = self.df[self.df["ID"].astype(str) == id].iloc[0][["ID", "Resume"]]
           resume_with_id = "Applicant ID " + resume_df["ID"].astype(str) + "\n" + resume_df["Resume"]
           retrieved_resumes.append(resume_with_id)
-        except:
-          return []
+        except (IndexError, KeyError) as e:
+          print(f"Warning: Resume ID {id} not found — {e}")
+          continue
       return retrieved_resumes
 
     @tool(args_schema=JobDescription)
@@ -123,7 +124,7 @@ class SelfQueryRetriever(RAGRetriever):
         return toolbox[response.tool].run(response.tool_input)
       
     self.meta_data["rag_mode"] = rag_mode
-    llm_func_call = llm.llm.bind(functions=[format_tool_to_openai_function(tool) for tool in [retrieve_applicant_id, retrieve_applicant_jd]])
+    llm_func_call = llm.llm.bind(functions=[convert_to_openai_function(t) for t in [retrieve_applicant_id, retrieve_applicant_jd]])
 
     chain = self.prompt | llm_func_call | OpenAIFunctionsAgentOutputParser() | router
     result = chain.invoke({"input": question})

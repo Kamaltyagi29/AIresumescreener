@@ -26,10 +26,10 @@ os.environ["GEMINI_API_KEY"] = "AIzaSyAKu8SX1AusIVmR7DjZnJhjf7JXfs4fc_g"
 
 load_dotenv()
 
-PDF_STORAGE_PATH = "/home/kamaltyagi14/Resume-Screening-RAG-Pipeline/demo/DATA/data/supplementary-data/pdf-resumes"
-DATA_PATH = "/home/kamaltyagi14/Resume-Screening-RAG-Pipeline/demo/DATA/data/supplementary-data/pdf-resumes.csv"
-FAISS_PATH = os.getenv("FAISS_PATH")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
+PDF_STORAGE_PATH = "data\pdf_resumes"
+DATA_PATH = 'data\\resume\\resume.csv'
+FAISS_PATH = 'vectorstore'
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 st.set_page_config(page_title="Resume Screening AI")
 st.title("Resume Screening AI")
@@ -108,7 +108,7 @@ def upload_file():
                 if st.session_state.rag_pipeline is None:
                     st.session_state.rag_pipeline = SelfQueryRetriever(new_vectordb, df_load)
                 else:
-                    st.session_state.rag_pipeline.vectorstore.merge_from(new_vectordb)
+                    st.session_state.rag_pipeline.vectorstore.save_local(FAISS_PATH)
 
             except Exception as error:
                 with modal.container():
@@ -151,9 +151,9 @@ with st.sidebar:
         key="uploaded_file", 
         on_change=upload_file
     )
-    df_resumes = pd.read_csv(DATA_PATH)
+    df_resumes = st.session_state.df
     resume_mapping = {row["Resume_name"]: row["ID"] for _, row in df_resumes.iterrows()}
-    resume_files = os.listdir("/home/kamaltyagi14/Resume-Screening-RAG-Pipeline/demo/DATA/data/supplementary-data/pdf-resumes")
+    resume_files = os.listdir("data\pdf_resumes")
     resume_options = [f"{resume_mapping[file]} - {file}" if file in resume_mapping else file for file in resume_files]
     file_to_download = st.selectbox("Select resume to download", resume_options, index=None, placeholder="Choose a file...")
     if file_to_download:
@@ -167,7 +167,7 @@ with st.sidebar:
     st.button("Clear conversation", on_click=clear_message)
 
 for message in st.session_state.chat_history:
-    if isinstance(message, (AIMessage, HumanMessage)):
+    if isinstance(message, AIMessage):
         with st.chat_message("AI"):
             st.write(message.content)
     elif isinstance(message, HumanMessage):
@@ -179,10 +179,10 @@ for message in st.session_state.chat_history:
 
 retriever = st.session_state.rag_pipeline
 st.session_state.api_key = os.getenv("GEMINI_API_KEY")
-st.session_state.gpt_selection = "gemini-1.5-pro-latest"
+st.session_state.gpt_selection = "gemini-2.5-flash"
 llm = ChatBot(
-    # api_key=st.session_state.api_key,
-    # model=st.session_state.gpt_selection
+    api_key=st.session_state.api_key,
+    model=st.session_state.gpt_selection
 )
 if user_query is not None and user_query != "":
     with st.chat_message("Human"):
